@@ -11,6 +11,7 @@ app.get("/:query", (req, res) => {
 
 app.get("/:query/:lang", async (req, res) => {
     const url = await findWikiImage(req.params.query, req.params.lang)
+    res.status(301)
 
     if (typeof req.query.urlOnly === 'string') {
         res.send(url)
@@ -21,7 +22,7 @@ app.get("/:query/:lang", async (req, res) => {
 })
 
 app.use(/.+/, (req, res) => {
-    res.redirect("/wallace shawn")
+    res.redirect("/qasdhfalksdfknlqwer")
 })
 
 app.listen(4321, () => {

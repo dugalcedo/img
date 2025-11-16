@@ -66,3 +66,4 @@ const findWikiImageSrcInDom = (root: HTMLElement): string => {
     if (!src) return defaultImage
     return src
 }
+
