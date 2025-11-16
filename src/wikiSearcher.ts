@@ -53,9 +53,13 @@ const fromWikiSearch = async (query: string, lang: string, attemptNumber: number
     }
 }
 
+const disallowedHeights = []
+for (let i = 5; i < 51; i++) {disallowedHeights.push(i)}
+const notRules = disallowedHeights.map(h => `:not([height=${h}]):not([width=${h}])`).join('')
+
 const findWikiImageSrcInDom = (root: HTMLElement): string => {
     const img = (
-        root.querySelector('img[src*="wikimedia" i][src*="thumb" i]:not([alt*="Featured article" i]):not([alt*="Page semi-protected" i]):not([alt*="Listen to this article" i]):not([width*="20" i]):not([width*="19" i]):not([width*="21" i]):not([width*="40" i]):not([height*="19" i]):not([height*="21" i]):not([src*="/svg/"])')
+        root.querySelector(`img[src*="wikimedia" i][src*="thumb" i]:not([alt*="Featured article" i]):not([alt*="Page semi-protected" i]):not([alt*="Listen to this article" i]):not([src*=".svg"])${notRules}`)
     )
     if (!img) return defaultImage
     const src = img.getAttribute('src')
