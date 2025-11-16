@@ -1,6 +1,7 @@
 import express, { type Request } from 'express'
 import cors from 'cors'
 import { findWikiImage } from './wikiSearcher.js'
+import { DEV } from './env.js'
 
 const app = express()
 app.use(cors())
@@ -10,11 +11,27 @@ app.get("/:query", (req, res) => {
 })
 
 app.get("/:query/:lang", async (req, res) => {
-    const url = await findWikiImage(req.params.query, req.params.lang)
-    res.status(301)
+    res.redirect(`/${req.params.query}/${req.params.lang}/none`)
+})
 
-    if (typeof req.query.urlOnly === 'string') {
+app.get("/:query/:lang/:options", async (req, res) => {
+    const url = await findWikiImage(req.params.query, req.params.lang)
+    if (!DEV) {
+        res.status(301)
+    }
+
+    if (req.params.options.includes('urlOnly')) {
         res.send(url)
+        return
+    }
+
+    if (req.params.options.includes('stayOnSite')) {
+        res.send(`<html>
+            <head></head>
+            <body>
+                <img src="${url}">
+            </body>
+        </html>`)
         return
     }
 

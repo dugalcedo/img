@@ -7,7 +7,7 @@ export const findWikiImage = async (query: string, lang: string): Promise<string
 }
 
 const fromWikiPage = async (query: string, lang: string, attemptNumber: number): Promise<string> => {
-    if (attemptNumber > 1) return defaultImage;
+    if (attemptNumber > 2) return defaultImage;
 
     try {
         const url  =`https://${lang}.wikipedia.org/wiki/${encodeURI(query)}`
@@ -19,6 +19,11 @@ const fromWikiPage = async (query: string, lang: string, attemptNumber: number):
 
         const text = await res.text()
         const root = parse(text)
+
+        // might be disambiguation page
+        if (isDisambiguationPage(root as never as HTMLElement)) {
+            return await fromDisambiguationPage(root as never as HTMLElement, query, lang, attemptNumber)
+        }
 
         // Try to find image
         const imgSrc = findWikiImageSrcInDom(root as unknown as HTMLElement)
@@ -35,14 +40,19 @@ const fromWikiSearch = async (query: string, lang: string, attemptNumber: number
     if (attemptNumber > 0) return defaultImage;
 
     try {
+        const url = `https://${lang}.wikipedia.org/w/index.php?search=${encodeURI(query)}`
+        devLog({ url })
+
         // try to load img page
-        const res = await fetch(`https://${lang}.wikipedia.org/w/index.php?search=${encodeURI(query)}`)
+        const res = await fetch(url)
         if (!res.ok) return defaultImage
+
 
         const text = await res.text()
         const root = parse(text)
+
         const a = root.querySelector('.mw-search-result-heading a')
-        if (!a) return defaultImage;
+        if (!a) return findWikiImageSrcInDom(root as never as HTMLElement);
         const href = a.getAttribute('href');
         if (!href) return defaultImage;
         return await fromWikiPage(query, lang, attemptNumber+1);
@@ -53,17 +63,43 @@ const fromWikiSearch = async (query: string, lang: string, attemptNumber: number
     }
 }
 
-const disallowedHeights = []
-for (let i = 5; i < 51; i++) {disallowedHeights.push(i)}
-const notRules = disallowedHeights.map(h => `:not([height=${h}]):not([width=${h}])`).join('')
+const fromDisambiguationPage = async (root: HTMLElement, query: string, lang: string, attemptNumber: number): Promise<string> => {
+    if (attemptNumber > 0) return defaultImage;
+
+    try {
+        const anchors = root.querySelectorAll('.mw-body-content li a[href^="/wiki/" i]')
+        for (let i = 0; i < anchors.length; i++) {
+            const a = anchors[i]
+            const href = a.getAttribute('href')
+            if (!href) continue;
+            if (href.includes(':')) continue;
+            return await fromWikiPage(href.replace('/wiki/',''), lang, attemptNumber+1)
+        }
+        return defaultImage
+    } catch (error) {
+        devLog(`ERROR in fromDisambiguationPage(<root>, ${query}, ${lang})`, error)
+        return defaultImage
+    }
+}
 
 const findWikiImageSrcInDom = (root: HTMLElement): string => {
-    const img = (
-        root.querySelector(`img[src*="wikimedia" i][src*="thumb" i]:not([alt*="Featured article" i]):not([alt*="Page semi-protected" i]):not([alt*="Listen to this article" i]):not([src*=".svg"])${notRules}`)
-    )
-    if (!img) return defaultImage
-    const src = img.getAttribute('src')
-    if (!src) return defaultImage
-    return src
+    const imgs = root.querySelectorAll(`img[src*="wikimedia"][src*="thumb"]`)
+    for (let i = 0; i < imgs.length; i++) {
+        const img = imgs[i]
+        const w = Number(img.getAttribute('width'))
+        const h = Number(img.getAttribute('height'))
+        const src = img.getAttribute('src')
+        devLog({src, w, h})
+        if (w < 101) continue;
+        if (h < 101) continue;
+        if (!src) continue;
+        return `https:${src}`
+    }
+    return defaultImage
+}
+
+const isDisambiguationPage = (root: HTMLElement): boolean => {
+    const a = root.querySelector('a[href="/wiki/Help:Disambiguation" i]')
+    return !!a
 }
 
