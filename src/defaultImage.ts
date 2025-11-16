@@ -1,0 +1,1 @@
+export default "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Wallace_Shawn_Jay_Kelly-37_%28cropped%29.jpg/250px-Wallace_Shawn_Jay_Kelly-37_%28cropped%29.jpg"
